@@ -6,7 +6,7 @@ Aplikasi kasir (Point of Sale) restoran full-stack berbasis web. Satu aplikasi m
 
 Dibangun sebagai **single-page application** (Next.js App Router) dengan REST API di server yang sama dan database **SQLite** melalui Prisma ORM, sehingga dapat langsung dijalankan di satu mesin tanpa layanan eksternal.
 
-> **Demo langsung:** versi terpublikasi dapat dicoba di <https://preview-88d4e02b-52a8-42e2-9847-6c9882d2b1f8.space-z.ai/> — masuk menggunakan salah satu akun contoh pada bagian [Akun Bawaan](#akun-bawaan).
+> **Demo langsung:** versi terpublikasi dapat dicoba di <https://f1fnq9pa7g71-d.space-z.ai/> — masuk menggunakan salah satu akun contoh pada bagian [Akun Bawaan](#akun-bawaan).
 
 ---
 
