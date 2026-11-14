@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============ AUTENTIKASI ============
+
+model User {
+  id           String    @id @default(cuid())
+  nama         String
+  email        String    @unique
+  passwordHash String
+  role         String // MANAGEMENT | KASIR
+  aktif        Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+  pesanan      Pesanan[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ============ MASTER DATA ============
+
+model Kategori {
+  id     String @id @default(cuid())
+  nama   String @unique
+  urutan Int    @default(0)
+  aktif  Boolean @default(true)
+  menus  Menu[]
+}
+
+model Menu {
+  id         String   @id @default(cuid())
+  kode       String   @unique
+  nama       String
+  kategoriId String
+  kategori   Kategori @relation(fields: [kategoriId], references: [id])
+  harga      Int
+  deskripsi  String?
+  foto       String? // data URL (base64)
+  tersedia   Boolean  @default(true)
+  aktif      Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  items      PesananItem[]
+  resep      Resep[]
+
+  @@index([kategoriId])
+}
+
+model Meja {
+  id        String   @id @default(cuid())
+  nama      String   @unique
+  kapasitas Int      @default(2)
+  status    String   @default("KOSONG") // KOSONG | TERISI | RESERVASI
+  pesanan   Pesanan[]
+}
+
+// ============ TRANSAKSI ============
+
+model Pesanan {
+  id           String       @id // ORD-YYYYMMDD-0001
+  tipe         String // DINE_IN | TAKE_AWAY | DELIVERY
+  mejaId       String?
+  meja         Meja?        @relation(fields: [mejaId], references: [id])
+  namaPelanggan String?
+  telepon      String?
+  alamat       String?
+  status       String       @default("PENDING") // PENDING | PREPARING | READY | SERVED | COMPLETED | CANCELLED
+  catatan      String?
+  kasirId      String
+  kasir        User         @relation(fields: [kasirId], references: [id])
+  subtotal     Int          @default(0)
+  pajakPersen  Float        @default(0)
+  servicePersen Float       @default(0)
+  pajakNominal Int          @default(0)
+  serviceNominal Int        @default(0)
+  total        Int          @default(0)
+  stokDiproses Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  items        PesananItem[]
+  pembayarans  Pembayaran[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PesananItem {
+  id        String  @id @default(cuid())
+  pesananId String
+  pesanan   Pesanan @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  menuId    String
+  menu      Menu    @relation(fields: [menuId], references: [id])
+  namaMenu  String
+  harga     Int
+  qty       Int
+  catatan   String?
+  bayarId   String? // id pembayaran jika sudah dibayar (split bill per item)
+  createdAt DateTime @default(now())
+
+  @@index([pesananId])
+}
+
+model Pembayaran {
+  id        String   @id @default(cuid())
+  pesananId String
+  pesanan   Pesanan  @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  metode    String // TUNAI | QRIS | TRANSFER | DEBIT
+  jumlah    Int
+  kembalian Int      @default(0)
+  referensi String?
+  kasirId   String
+  createdAt DateTime @default(now())
+
+  @@index([pesananId])
+}
+
+// ============ STOK & RESEP ============
+
+model BahanBaku {
+  id        String   @id @default(cuid()) // BHN001
+  nama      String
+  satuan    String // gr, ml, pcs, dll
+  stok      Float    @default(0)
+  minStok   Float    @default(0)
+  hargaModal Float   @default(0)
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  resep     Resep[]
+  mutasi    MutasiStok[]
+}
+
+model Resep {
+  id      String   @id @default(cuid())
+  menuId  String
+  menu    Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  bahanId String
+  bahan   BahanBaku @relation(fields: [bahanId], references: [id])
+  qty     Float
+
+  @@unique([menuId, bahanId])
+}
+
+model MutasiStok {
+  id           String    @id @default(cuid())
+  bahanId      String
+  bahan        BahanBaku @relation(fields: [bahanId], references: [id], onDelete: Cascade)
+  tipe         String // MASUK | KELUAR | PENYESUAIAN | OTOMATIS
+  qty          Float // selalu positif; tipe menentukan arah
+  stokSesudah  Float
+  keterangan   String?
+  refId        String? // id pesanan jika otomatis
+  userId       String?
+  createdAt    DateTime  @default(now())
+
+  @@index([bahanId])
+}
+
+// ============ SISTEM ============
+
+model Pengaturan {
+  key   String @id
+  value String
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  userNama  String?
+  aksi      String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
